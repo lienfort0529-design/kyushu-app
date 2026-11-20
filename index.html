@@ -24,6 +24,38 @@
   .mark { width: 24px; height: 24px; }
   h1 { margin: 20px 0 6px; font-family: "Shippori Mincho B1", "Hiragino Mincho ProN", serif; font-size: 32px; letter-spacing: .14em; }
   .hero p { margin: 0; font-family: Oswald, "Arial Narrow", sans-serif; font-size: 11px; letter-spacing: .3em; color: #9fb4dd; }
+  /* 目標まであと（本社の住宅設備アプリのメニューと同じ見た目） */
+  .goals { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 16px; }
+  .goals:empty { display: none; }
+  .gbox { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .gh { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .gh b { font-size: 15px; color: var(--ink); } .gh span { font-family: Oswald, "Arial Narrow", sans-serif; font-size: 10px; letter-spacing: .22em; color: var(--blue); }
+  .gl { display: grid; grid-template-columns: 44px 1fr auto; align-items: baseline; gap: 0 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+  .gh + .gl { border-top: 0; }
+  .gk { font-size: 13px; color: var(--sub); }
+  .gv { font-family: Inter, "Hiragino Sans", sans-serif; font-weight: 800; font-size: 22px; color: var(--ink); letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+  .gv em { font-style: normal; font-family: "Hiragino Sans", sans-serif; font-size: 12px; font-weight: 700; color: var(--blue); margin-right: 6px; }
+  .gv.done { color: #27ae60; } .gv.none { font-size: 14px; color: var(--sub); }
+  .gl small { grid-column: 2 / 4; font-size: 12px; font-family: Inter, "Hiragino Sans", sans-serif; }
+  .gp { font-family: Inter, "Hiragino Sans", sans-serif; font-weight: 800; font-size: 15px; color: var(--blue); font-variant-numeric: tabular-nums; }
+  .gp.done { color: #27ae60; }
+  .gb { grid-column: 2 / 4; height: 6px; margin: 6px 0 2px; border-radius: 99px; background: var(--track); overflow: hidden; }
+  .gb i { display: block; height: 100%; border-radius: 99px; background: var(--btn); } .gb i.done { background: #27ae60; }
+  .ghint { grid-column: 1 / -1; font-size: 12px; color: var(--sub); margin: 0 4px; }
+  .ghint select { width: auto; margin-left: 6px; padding: 4px 8px; font-size: 13px; border-radius: 8px; }
+  #goalBtn { display: none; width: 100%; margin-top: 10px; padding: 10px; font-size: 14px; font-weight: 600; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--blue); }
+  @media (min-width: 760px) { .goals { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; } }
+  #mg { display: none; position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.55); align-items: center; justify-content: center; padding: 16px; }
+  #mg.on { display: flex; }
+  .gcard { width: 100%; max-width: 360px; padding: 18px; }
+  .gcard h3 { margin: 0 0 4px; font-size: 20px; }
+  .gcard p { margin: 0 0 10px; font-size: 13px; }
+  .gcard select { width: 100%; font-size: 16px; padding: 10px; border-radius: 10px; margin-bottom: 6px; }
+  .gcard label { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; font-size: 16px; font-weight: 600; color: var(--ink) !important; }
+  .gcard input { width: 150px; font-size: 20px; padding: 8px; border-radius: 10px; text-align: right; }
+  .gcard .go { width: 100%; margin-top: 12px; padding: 14px; font-size: 17px; font-weight: 700; border: 0; border-radius: 12px; }
+  .gcard .no { width: 100%; margin-top: 8px; padding: 10px; font-size: 15px; border: 0; background: none; color: var(--sub); }
+  #mgMsg { color: #e06b5f; font-size: 13px; min-height: 18px; }
   .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
   a.app { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; min-height: 132px; padding: 15px 14px; border-radius: 18px;
           border: 1px solid var(--line); box-shadow: var(--shadow); background: var(--surface); color: var(--ink); text-decoration: none; }
@@ -221,6 +253,8 @@
     <h1>九州支社</h1>
     <p>KYUSHU BRANCH</p>
   </div>
+  <div class="goals" id="goals"></div>
+  <button id="goalBtn">🎯 今月の目標を入れる・変える</button>
   <div class="tiles">
     <a class="app main" href="tataki.html"><i><svg viewBox="0 0 24 24"><path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M4 21h16"/><circle cx="14.5" cy="12.5" r="1"/></svg></i>
       <div><span class="en">COUNTER</span><b>叩きカウンター</b><small>1軒ごとの結果・今日の目標</small></div></a>
@@ -230,5 +264,73 @@
       <div><span class="en">KPI</span><b>KPI・ランキング</b><small>自分の成績・ランキング</small></div></a>
   </div>
   <div class="note">ホーム画面に置くときは、この画面で「共有 → ホーム画面に追加」（Androidは「︙ → ホーム画面に追加」）。</div>
+  <div id="mg"><div class="gcard">
+    <h3>🎯 今月の目標</h3><p>チームの目標と、1人ずつの目標を入れられます（今月の分。来月はまた入れます）</p>
+    <select id="mgWho"></select>
+    <label>アポ（件）<input id="mg-a" type="number" inputmode="numeric" min="0"></label>
+    <label>成約（件）<input id="mg-w" type="number" inputmode="numeric" min="0"></label>
+    <label>売上（円）<input id="mg-s" type="number" inputmode="numeric" min="0" step="10000"></label>
+    <div id="mgMsg"></div>
+    <button class="go ok" id="mgOk">保存する</button>
+    <button class="no" id="mgNo">閉じる</button>
+  </div></div>
+<script>
+  // 目標まであと（チーム・自分）。前に読んだ数字をすぐ出して、裏で最新を読む。自分の名前はカウンター・お客さんと同じ（name）
+  (function () {
+    var box = document.getElementById('goals'), D = null;
+    var $ = function (id) { return document.getElementById(id); };
+    var store = function (k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) {} };
+    var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+    var yen = function (v) { return '¥' + Math.round(v).toLocaleString(); };
+    var num = function (v) { return Math.round(v).toLocaleString(); };
+    function line(label, v, goal, fmt, unit) {
+      v = Number(v) || 0;
+      if (!goal) return '<div class="gl"><span class="gk">' + label + '</span><b class="gv none">目標なし</b><span></span><small>' + fmt(v) + unit + '</small></div>';
+      var left = goal - v, p = v / goal, done = left <= 0 ? ' done' : '';
+      return '<div class="gl"><span class="gk">' + label + '</span>' + (done ? '<b class="gv done">達成！</b>' : '<b class="gv"><em>あと</em>' + fmt(left) + unit + '</b>') +
+        '<span class="gp' + done + '">' + (Math.floor(p * 1000) / 10) + '%</span>' +
+        '<div class="gb"><i class="' + done + '" style="width:' + Math.min(100, Math.max(0, p * 100)) + '%"></i></div>' +
+        '<small>' + fmt(v) + unit + ' ／ ' + fmt(goal) + unit + '</small></div>';
+    }
+    var lines = function (x) { var g = x.goal || {}; return line('アポ', x.apo, g.a, num, '件') + line('成約', x.won, g.w, num, '件') + line('売上', x.sales, g.s, yen, ''); };
+    function draw(d) {
+      if (!d || !d.team) return;
+      D = d;
+      var me = store('name') || '', p = d.people.filter(function (x) { return x.name === me; })[0];
+      var h = '<div class="gbox"><div class="gh"><b>' + d.month + '月 九州支社</b><span>TEAM GOAL</span></div>' + lines(d.team) + '</div>';
+      if (p) h += '<div class="gbox"><div class="gh"><b>' + esc(me) + '</b><span>MY GOAL</span></div>' + lines(p) + '</div>';
+      else h += '<div class="ghint">自分の名前<select id="gMe"><option value="">選択</option>' + d.people.map(function (x) { return '<option>' + esc(x.name) + '</option>'; }).join('') + '</select> を選ぶと、自分の「あと」も出ます</div>';
+      box.innerHTML = h;
+      if ($('gMe')) $('gMe').onchange = function () { store('name', this.value); draw(D); };
+      $('goalBtn').style.display = 'block';
+    }
+    function openGoal() {
+      if (!D) return;
+      var me = store('name') || '';
+      $('mgWho').innerHTML = '<option value="チーム">チーム全体（九州支社）</option>' + D.people.map(function (x) { return '<option' + (x.name === me ? ' selected' : '') + ' value="' + esc(x.name) + '">' + esc(x.name) + '（個人）</option>'; }).join('');
+      fillGoal(); $('mgMsg').textContent = ''; $('mg').classList.add('on');
+    }
+    function fillGoal() {
+      var w = $('mgWho').value, x = w === 'チーム' ? D.team : D.people.filter(function (p) { return p.name === w; })[0], g = (x && x.goal) || {};
+      ['a', 'w', 's'].forEach(function (k) { $('mg-' + k).value = g[k] != null ? g[k] : ''; });
+    }
+    function saveGoal() {
+      var g = {};
+      for (var k of ['a', 'w', 's']) {
+        var s = $('mg-' + k).value.trim(), n = Number(s);
+        if (s === '' || !(n >= 0) || n !== Math.floor(n)) { $('mgMsg').textContent = '3つとも0以上の数を入れてください（目標がない項目は0）'; return; }
+        g[k] = n;
+      }
+      $('mgOk').disabled = true; $('mgMsg').textContent = '保存中…';
+      google.script.run.withSuccessHandler(function (r) { $('mgOk').disabled = false; store('homeCache', JSON.stringify(r)); draw(r); $('mg').classList.remove('on'); })
+        .withFailureHandler(function (e) { $('mgOk').disabled = false; $('mgMsg').textContent = e.message; }).monthGoalSave($('mgWho').value, g);
+    }
+    $('goalBtn').onclick = openGoal; $('mgWho').onchange = fillGoal; $('mgOk').onclick = saveGoal;
+    $('mgNo').onclick = function () { $('mg').classList.remove('on'); };
+    try { draw(JSON.parse(store('homeCache') || 'null')); } catch (e) {}
+    if (!window.google || !google.script || !google.script.run) return;
+    google.script.run.withSuccessHandler(function (r) { store('homeCache', JSON.stringify(r)); draw(r); }).withFailureHandler(function () {}).homeData();
+  })();
+</script>
 </body>
 </html>

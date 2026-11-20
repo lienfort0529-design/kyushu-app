@@ -25,7 +25,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbyq-oN_51JWuE4RZB3BXVCR
   // ONCE：設定・名前の一覧。今日覚えたものがあればそれをすぐ使い、裏で読み直して次に開いたときに使う
   // TWICE：今日の数・予定。覚えたものをすぐ出し、新しいのが届いたら（変わっていれば）もう一度出す
   const ONCE = ['getConfig'];
-  const TWICE = ['getTodayGoal', 'custList', 'kpiData'];
+  const TWICE = ['getTodayGoal', 'custList', 'kpiData', 'homeData'];
   const today = () => new Date().toLocaleDateString('sv-SE');
   const keyOf = (fn, a) => 'jc:' + fn + ':' + JSON.stringify(a) + (ONCE.includes(fn) ? ':' + today() : '');
   const load = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
