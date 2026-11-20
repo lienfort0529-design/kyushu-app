@@ -1,0 +1,11 @@
+/* GitHub Pages 版だけの見た目：合言葉の画面と、ホーム画面から全画面で開いたときの上の余白（iPhone の時計などの下） */
+.lf-bar { padding-top: calc(10px + env(safe-area-inset-top)) !important; }
+.hero { padding-top: calc(30px + env(safe-area-inset-top)) !important; }
+#lfLogin { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 24px; background: #18202e; }
+#lfLogin .box { width: 100%; max-width: 340px; color: #fff; text-align: center; }
+#lfLogin .mk { display: block; width: 56px; height: 56px; margin: 0 auto 16px; }
+#lfLogin small { display: block; font-family: Oswald, "Arial Narrow", sans-serif; letter-spacing: .35em; font-size: 12px; color: #9fb4dd; }
+#lfLogin b { display: block; margin: 6px 0 22px; font-family: "Shippori Mincho B1", serif; font-size: 30px; letter-spacing: .14em; }
+#lfLogin p { margin: 0 0 12px; font-size: 14px; color: #c9d4ea; }
+#lfLogin input { width: 100%; padding: 14px; font-size: 18px; border-radius: 10px; border: 0 !important; text-align: center; color: #18202e; }
+#lfLogin button { width: 100%; margin-top: 12px; padding: 14px; font-size: 17px; font-weight: 600; border: 0; border-radius: 10px; background: #2a56a8; color: #fff; }

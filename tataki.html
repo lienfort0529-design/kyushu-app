@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="九州支社">
+<meta name="theme-color" content="#18202e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>叩きカウンター</title>
+<script src="api.js"></script>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; padding: 16px; font-family: -apple-system, sans-serif; background: #f4f5f7; color: #222; }
+  select { width: 100%; font-size: 18px; padding: 10px; border-radius: 10px; border: 1px solid #ccc; }
+  .summary { display: flex; gap: 8px; margin: 14px 0; font-size: 15px; }
+  .summary > div { flex: 1; background: #fff; border-radius: 12px; padding: 8px 6px; text-align: center; }
+  .summary > div > b { font-size: 26px; display: block; }
+  .left { display: block; font-size: 13px; color: #555; min-height: 0; }
+  .left .n { font-size: 20px; font-weight: 700; color: #d35400; }
+  .left .done { font-size: 15px; font-weight: 700; color: #27ae60; }
+  .left .bar { display: block; height: 6px; background: #e3e6ea; border-radius: 3px; margin: 4px 0 2px; overflow: hidden; }
+  .left .bar i { display: block; height: 100%; background: #2a56a8; }
+  .left .g { font-size: 11px; color: #888; }
+  #goalEdit { display: none; width: 100%; margin: -6px 0 12px; padding: 8px; font-size: 14px; border-radius: 10px; border: 1px solid #ccc; background: #fff; color: #2a56a8; }
+  #goalBox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 20; align-items: center; justify-content: center; padding: 16px; }
+  #goalBox.on { display: flex; }
+  .gcard { background: #fff; border-radius: 16px; padding: 18px; width: 100%; max-width: 360px; }
+  .gcard h3 { margin: 0 0 4px; font-size: 20px; }
+  .gcard p { margin: 0 0 12px; color: #666; font-size: 14px; }
+  .gcard label { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; font-size: 17px; font-weight: 600; }
+  .gcard input { width: 110px; font-size: 22px; padding: 8px; border-radius: 10px; border: 1px solid #ccc; text-align: right; }
+  .gcard .go { width: 100%; margin-top: 12px; padding: 14px; font-size: 18px; font-weight: 700; border: 0; border-radius: 12px; background: #2a56a8; color: #fff; }
+  .gcard .no { width: 100%; margin-top: 8px; padding: 10px; font-size: 15px; border: 0; background: none; color: #666; }
+  #goalMsg { color: #c0392b; font-size: 14px; min-height: 18px; margin-top: 6px; }
+  #custBox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 20; overflow-y: auto; padding: 16px; }
+  #custBox.on { display: block; }
+  #custBox .gcard { margin: 0 auto; }
+  .cf { display: block; margin: 10px 0 0; font-size: 13px; font-weight: 600; }
+  .cf input, .cf textarea { display: block; width: 100%; margin-top: 4px; padding: 10px; font-size: 16px; border-radius: 10px; border: 1px solid #ccc; font-family: inherit; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chips label { display: flex; align-items: center; gap: 4px; padding: 6px 10px; border: 1px solid var(--line, #ccc); border-radius: 999px; font-size: 14px; font-weight: 600; }
+  #pendingCust { display: none; margin-top: 10px; padding: 10px; border-radius: 10px; font-size: 14px; text-align: center; background: var(--pend, #fff3cd); color: var(--pendInk, #7a5b00); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  button.r { min-height: 76px; font-size: 17px; font-weight: 600; border: 0; border-radius: 14px; color: #fff; position: relative; }
+  button.r:active { transform: scale(.96); }
+  button.r span { position: absolute; top: 6px; right: 10px; font-size: 14px; opacity: .9; }
+  .undo { margin-top: 14px; width: 100%; padding: 12px; font-size: 16px; border-radius: 10px; border: 1px solid #999; background: #fff; }
+  #msg { text-align: center; min-height: 20px; margin-top: 8px; font-size: 14px; color: #666; }
+  #pending { display: none; margin-top: 10px; padding: 10px; border-radius: 10px; background: #fff3cd; color: #7a5b00; font-size: 14px; text-align: center; }
+  #overlay { display: none; position: fixed; inset: 0; background: rgba(255,255,255,.6); z-index: 10;
+             align-items: center; justify-content: center; flex-direction: column; font-size: 16px; font-weight: 600; }
+  body.busy #overlay { display: flex; }
+  .spinner { width: 44px; height: 44px; border: 5px solid #ccc; border-top-color: #2980b9; border-radius: 50%;
+             animation: spin .8s linear infinite; margin-bottom: 10px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&family=Oswald:wght@400;500&family=Shippori+Mincho+B1:wght@700&display=swap" rel="stylesheet">
+<script>
+  // 明るい・暗い：端末の設定に合わせる。右上のボタンで切り替えると、その端末に覚える（lfTheme）
+  (function () { try { var t = localStorage.getItem('lfTheme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) {} })();
+</script>
+<style>
+  /* 九州支社アプリ共通のデザイン（本社の住宅設備アプリ 32_クローザー入力/コード/lf.html と同じ。左のメニューだけ九州用）。
+     色は Lien Fort（lienfort.co.jp）の紺と青。各画面の style より後に読むので上書きになる */
+  :root { --ink: #18202e; --blue: #2a56a8; --btn: #2a56a8; --sub: #5b6577; --line: #e2e7ef; --bg: #f3f5f9; --pale: #eef2f9;
+          --surface: #fff; --surface2: #f6f8fb; --track: #e9edf3; --bar: #18202e; --chip: #18202e; --chipInk: #fff;
+          --veil: rgba(243,245,249,.72); --shadow: 0 1px 2px rgba(24,32,46,.06), 0 8px 24px rgba(24,32,46,.05);
+          --pend: #fff3cd; --pendInk: #7a5b00; --goodBg: #eafaf0; --badBg: #fdecea;
+          --en: Oswald, "Arial Narrow", sans-serif; --num: Inter, "Hiragino Sans", sans-serif; color-scheme: light; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --ink: #eef2f8; --blue: #7fa2e8; --sub: #9aa6b8; --line: #263042; --bg: #0d121b; --pale: #1c2433;
+          --surface: #161d29; --surface2: #1c2433; --track: #263042; --bar: #0a0f17; --chip: #eef2f8; --chipInk: #0d121b;
+          --veil: rgba(13,18,27,.72); --shadow: none; --pend: #3a3216; --pendInk: #f0d58a; --goodBg: #12301f; --badBg: #3a1a1a; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --ink: #eef2f8; --blue: #7fa2e8; --sub: #9aa6b8; --line: #263042; --bg: #0d121b; --pale: #1c2433;
+          --surface: #161d29; --surface2: #1c2433; --track: #263042; --bar: #0a0f17; --chip: #eef2f8; --chipInk: #0d121b;
+          --veil: rgba(13,18,27,.72); --shadow: none; --pend: #3a3216; --pendInk: #f0d58a; --goodBg: #12301f; --badBg: #3a1a1a; color-scheme: dark; }
+
+  body { background: var(--bg) !important; color: var(--ink) !important; padding: 0 14px 40px !important;
+         font-family: "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif !important; }
+
+  /* 上の帯 */
+  .lf-bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; margin: 0 -14px 14px; padding: 12px 14px;
+            background: var(--bar); color: #fff; }
+  .lf-back { flex: none; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; padding-bottom: 3px;
+             border: 1px solid rgba(255,255,255,.18); border-radius: 10px; color: #fff; text-decoration: none; font-size: 24px; }
+  .lf-t small { display: block; font-family: var(--en); font-size: 10px !important; letter-spacing: .3em; color: #8fa6cf !important; }
+  .lf-t b { font-size: 17px; letter-spacing: .05em; color: #fff; }
+  .lf-theme { flex: none; margin-left: auto; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+              border: 1px solid rgba(255,255,255,.18); border-radius: 10px; background: rgba(255,255,255,.06); color: #fff; padding: 0; cursor: pointer; }
+  .lf-theme svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+  .lf-bar .who ~ .lf-theme, .lf-bar .lf-theme ~ .who { margin-left: 8px; }
+
+  /* 入力欄 */
+  select, input, textarea { background: var(--surface) !important; color: var(--ink) !important; border: 1px solid var(--line) !important; }
+  select:focus, input:focus, textarea:focus { outline: 2px solid rgba(42,86,168,.35); border-color: var(--blue) !important; }
+  input[type="checkbox"], input[type="radio"] { accent-color: var(--btn); }
+  h2, h3, .card h3 { letter-spacing: .03em; color: var(--ink) !important; }
+  label, .note, .sub, small, #msg, .legend, .count, .calc, .coord, .state, .card dt, .gcard p { color: var(--sub) !important; }
+  td.s small, .shd td.c small, button.r small, .tiles a.app.main small { color: rgba(255,255,255,.85) !important; } td.s.last small { color: #5c4b00 !important; }
+
+  /* 面（カード・表・パネル） */
+  .card, .summary, .summary > div, .tbl, .gcard, .sheet .in, #close, .visit, .panel, .find, .fab, .showBtn,
+  td.d, .mon td, .shd td:not(.c), .checks label, #sale .checks label, .sheet .kinds label, .names button, #pickList button {
+    background: var(--surface) !important; border-color: var(--line) !important; color: var(--ink); }
+  .card, .tbl, .summary > div, .summary, .gcard, .visit { border: 1px solid var(--line) !important; border-radius: 16px !important; box-shadow: var(--shadow) !important; }
+  .card summary, .req { color: var(--blue) !important; }
+  .summary div { font-size: 12px; color: var(--sub); }
+  .summary b, .big, .rk .v, .v, .gy td b { font-family: var(--num) !important; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .summary b { font-weight: 800; font-size: 28px !important; color: var(--ink); }
+  .big { font-weight: 800 !important; color: var(--ink) !important; }
+  .bar, .left .bar { background: var(--track) !important; }
+  .bar i, .left .bar i { background: var(--btn) !important; } .bar i.ok { background: #27ae60 !important; }
+  td.d.today, .mon td.today { border-color: var(--blue) !important; color: var(--blue); }
+  td.s.free { background: var(--btn) !important; }
+  td.s.block { background: var(--pale) !important; }
+  .legend span:first-child i { background: var(--btn) !important; }
+  .sec { border-top-color: var(--line) !important; color: var(--ink); }
+  .st { background: var(--pale) !important; color: var(--ink) !important; }
+  .st.shoho { background: #8e44ad !important; color: #fff !important; }
+  .st.x { background: var(--badBg) !important; color: #e06b5f !important; }
+  #pending { background: var(--pend) !important; color: var(--pendInk) !important; }
+  .checks label, #sale .checks label, .sheet .kinds label { color: var(--ink) !important; }
+
+  /* 表（KPI） */
+  table { color: var(--ink); }
+  th { background: var(--surface2) !important; color: var(--sub) !important; border-color: var(--line) !important; }
+  td { border-color: var(--line) !important; }
+  .tbl td:first-child { background: var(--surface) !important; }
+  .tbl th:first-child, tr.total td { background: var(--surface2) !important; }
+  td.good { background: var(--goodBg) !important; } td.bad { background: var(--badBg) !important; }
+
+  /* ボタン。結果ボタンの色（成約＝緑など）は見分けやすさのため各画面のまま */
+  button { font-family: inherit; }
+  button.r { border-radius: 14px !important; box-shadow: 0 2px 0 rgba(0,0,0,.14); letter-spacing: .03em; }
+  .undo, .listbtn, .nav button, .btns > *, .cancel, .seg button, .gyreset, .admin button, .opts button, .two button, .links button,
+  .sides button, .close-btn, .choice button, .kinds button, .pc button, #goalEdit, .del, .add {
+    background: var(--surface) !important; border: 1px solid var(--line) !important; color: var(--ink) !important; }
+  .listbtn, .btns > *, .btns .map, .links button, .two button, #goalEdit, .close-btn { color: var(--blue) !important; }
+  .del { color: #e06b5f !important; border-color: rgba(224,107,95,.5) !important; }
+  .add { border: 2px dashed var(--blue) !important; color: var(--blue) !important; }
+  .ok, .acts .ok, .gcard .go, #close .ok { background: var(--btn) !important; color: #fff !important; }
+  .tabs { gap: 6px !important; }
+  .tabs button, .seg button { border-radius: 999px !important; border: 1px solid var(--line) !important; background: var(--surface) !important; color: var(--sub) !important; font-weight: 600; }
+  .tabs button.on, .seg button.on, .opts button.on, .choice button.on, .sides button.on, .showBtn.on {
+    background: var(--chip) !important; border-color: var(--chip) !important; color: var(--chipInk) !important; }
+  .kinds button.on { background: #8e44ad !important; border-color: #8e44ad !important; color: #fff !important; }
+  #clockBtn { background: var(--pale) !important; color: var(--ink) !important; }
+  #clockBtn.on { background: var(--badBg) !important; color: #e06b5f !important; }
+  #placeBtn { background: var(--surface) !important; }
+  #findList button { color: var(--ink) !important; border-top-color: var(--line) !important; }
+  .fab, .fab * { color: var(--blue) !important; } #layerBtn, #findBtn, .showBtn { color: var(--ink) !important; }
+  #areaChip { background: var(--surface) !important; color: var(--ink) !important; } #areaChip button { background: var(--pale) !important; color: var(--ink) !important; }
+
+  /* ランキング：1〜3位は丸い数字（金・銀・銅） */
+  .rk .n { font-family: var(--num); }
+  .rk.m1 .n, .rk.m2 .n, .rk.m3 .n { width: 26px; height: 26px; margin: 0 auto; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                                    font-size: 13px; font-weight: 800; }
+  .rk.m1 .n { background: #e9c46a; color: #18202e !important; }
+  .rk.m2 .n { background: #cfd5de; color: #18202e !important; }
+  .rk.m3 .n { background: #dcae86; color: #18202e !important; }
+  /* 目立たせるカード（チーム売上など） */
+  .card.feature { background: #18202e !important; border-color: #18202e !important; color: #fff; }
+  :root[data-theme="dark"] .card.feature { background: #1d2a44 !important; border-color: #2c3d5f !important; }
+  .card.feature h3, .card.feature .big { color: #fff !important; }
+  .card.feature .sub, .card.feature h3 small { color: #b8c4d8 !important; }
+  .card.feature .bar { background: rgba(255,255,255,.14) !important; } .card.feature .bar i { background: #5b8def !important; }
+
+  /* 重なる画面（入力・一覧など）と読み込み中 */
+  .sheet, #sale, #list, #pick { background: var(--bg) !important; }
+  #pickList button { border-color: var(--line) !important; }
+  #overlay { background: var(--veil) !important; color: var(--ink); }
+  #goalBox { background: rgba(0,0,0,.55) !important; }
+  .spinner { border-color: var(--track) !important; border-top-color: var(--btn) !important; }
+
+  /* パソコン：左にメニュー（#lfSide は下のスクリプトで作る） */
+  #lfSide { display: none; }
+  @media (min-width: 1024px) {
+    body.lf-side { padding-left: 264px !important; padding-right: 32px !important; }
+    body.lf-side .lf-bar { margin: 0 -32px 20px; padding-left: 32px; padding-right: 32px; }
+    body.lf-side .lf-back { display: none; }
+    body.lf-side > .hero { margin-left: -32px !important; margin-right: -32px !important; padding-left: 40px !important; }
+    #lfSide { display: flex; position: fixed; left: 0; top: 0; bottom: 0; width: 232px; z-index: 40; flex-direction: column; gap: 22px;
+              padding: 26px 14px; box-sizing: border-box; overflow-y: auto; background: #111824; color: #eef2f8; }
+    #lfSide .lg { display: block; padding: 0 10px; text-decoration: none; color: #eef2f8; }
+    #lfSide .lg small { display: block; font-family: var(--en); font-size: 11px; letter-spacing: .35em; color: #7fa2e8; }
+    #lfSide .lg b { font-family: "Shippori Mincho B1", serif; font-size: 22px; letter-spacing: .12em; }
+    #lfSide nav { display: flex; flex-direction: column; gap: 2px; }
+    #lfSide nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; color: #b8c4d8; text-decoration: none; font-size: 14px; }
+    #lfSide nav a:hover { background: #1a2333; color: #fff; }
+    #lfSide nav a.on { background: #2a56a8; color: #fff; font-weight: 700; }
+    #lfSide nav a span { font-family: var(--en); font-size: 9px; letter-spacing: .2em; color: #6f82a6; width: 58px; flex: none; }
+    #lfSide nav a.on span { color: #c9d8f7; }
+  }
+</style>
+<script>
+  // 右上の明るい・暗いボタンと、パソコンの左メニュー
+  document.addEventListener('DOMContentLoaded', function () {
+    var root = document.documentElement;
+    var dark = function () { var t = root.getAttribute('data-theme'); return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
+    var SUN = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+    var MOON = '<svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+    var host = document.querySelector('.lf-bar') || document.querySelector('.hero');
+    if (host) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'lf-theme';
+      var paint = function () { b.innerHTML = dark() ? SUN : MOON; b.setAttribute('aria-label', dark() ? '明るい表示にする' : '暗い表示にする'); };
+      b.onclick = function () { var t = dark() ? 'light' : 'dark'; root.setAttribute('data-theme', t); try { localStorage.setItem('lfTheme', t); } catch (e) {} paint(); };
+      paint();
+      if (host.classList.contains('hero')) { b.style.position = 'absolute'; b.style.top = '18px'; b.style.right = '16px'; b.style.zIndex = '2'; host.appendChild(b); }
+      else host.insertBefore(b, host.querySelector('.who'));
+    }
+    var gh = /github\.io$/.test(location.hostname);
+    var a0 = document.querySelector('a.lf-back, a[href*="?page="]');
+    var base = a0 ? a0.href.split('?')[0] : '';
+    var PAGES = [['tataki', '叩きカウンター', 'COUNTER'], ['kyaku', 'お客さん', 'CUSTOMER'], ['kpi', 'KPI・ランキング', 'KPI']];
+    var href = function (k) { return gh ? (k === 'menu' ? 'index.html' : k + '.html') : base + '?page=' + k; };
+    var title = (document.querySelector('.lf-t b') || {}).textContent || '';
+    var file = location.pathname.split('/').pop();
+    var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+    var side = document.createElement('aside');
+    side.id = 'lfSide';
+    side.innerHTML = '<a class="lg" target="_top" href="' + esc(href('menu')) + '"><small>LIEN FORT</small><b>九州支社</b></a><nav>' + PAGES.map(function (p) {
+      var on = gh ? file === p[0] + '.html' : title === p[1];
+      return '<a target="_top" class="' + (on ? 'on' : '') + '" href="' + esc(href(p[0])) + '"><span>' + p[2] + '</span>' + p[1] + '</a>';
+    }).join('') + '</nav>';
+    document.body.appendChild(side);
+    document.body.classList.add('lf-side');
+  });
+</script>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="lf-bar"><a href="index.html" class="lf-back" aria-label="メニュー">‹</a><div class="lf-t"><small>LIEN FORT</small><b>叩きカウンター</b></div></header>
+  <select id="name"><option value="">名前を選択</option></select>
+  <div class="summary">
+    <div>叩き数<b id="knock">0</b><span class="left" id="l-knock"></span></div>
+    <div>対面数<b id="face">0</b><span class="left" id="l-face"></span></div>
+    <div>アポ<b id="apo">0</b><span class="left" id="l-apo"></span></div>
+  </div>
+  <button id="goalEdit">🎯 今日の目標を変える</button>
+  <div class="grid" id="grid"></div>
+  <button class="undo" id="undo">↩ 直前を取り消す</button>
+  <div id="msg"></div>
+  <div id="pending"></div>
+  <div id="pendingCust"></div>
+  <div id="goalBox"><div class="gcard">
+    <h3>🎯 今日の目標</h3><p id="goalWho"></p>
+    <label>叩き数<input id="g-k" type="number" inputmode="numeric" min="0" placeholder="軒"></label>
+    <label>対面数<input id="g-t" type="number" inputmode="numeric" min="0"></label>
+    <label>アポ<input id="g-a" type="number" inputmode="numeric" min="0" placeholder="件"></label>
+    <div id="goalMsg"></div>
+    <button class="go" id="goalOk">決定してスタート</button>
+    <button class="no" id="goalNo">閉じる</button>
+  </div></div>
+  <div id="custBox"><div class="gcard">
+    <h3>📝 お客さんの情報</h3><p id="custWho"></p>
+    <label class="cf">お客様名<input id="c-name" autocomplete="off"></label>
+    <label class="cf">電話<input id="c-tel" type="tel" inputmode="tel" autocomplete="off"></label>
+    <label class="cf">住所<input id="c-addr" autocomplete="off"></label>
+    <label class="cf">前確日時<input id="c-precheck" type="datetime-local"></label>
+    <label class="cf">商談の日時<input id="c-meeting" type="datetime-local"></label>
+    <div class="cf">商品<div class="chips" id="c-interest"></div></div>
+    <label class="cf">メモ<textarea id="c-memo" rows="2"></textarea></label>
+    <button class="go" id="custOk">保存する</button>
+    <button class="no" id="custLater">あとで入れる（お客さんの画面から）</button>
+  </div></div>
+  <div id="overlay"><div class="spinner"></div><span id="overlayText">記録中…</span></div>
+
+<script>
+  const COLORS = { '不在':'#8a8f98', 'インターホンNG':'#d9534f', 'フロントNG':'#e67e22', 'トーク後NG':'#c0392b',
+                   '両面アポ':'#27ae60', '片面アポ':'#16a085', '再訪':'#2980b9', '対象外':'#555' };
+  // アポは両面・片面の2つのボタン（どちらもアポ数に入る）
+  const APOS = ['両面アポ','片面アポ'];
+  const FACE = ['フロントNG','トーク後NG','再訪','対象外'].concat(APOS);
+  const $ = id => document.getElementById(id);
+  let results = [], busy = false, sending = false, sent = {};
+
+  // 九州支社の叩きカウンター（画面は本社の住宅設備アプリと同じ。32_クローザー入力/コード/tataki.html）。アプリ（GitHub）版は build.py で tataki.html に
+  // 押した記録はまずスマホに保存し（未送信）、電波があれば送る。電波がない間はたまっていき、戻ったら送る
+  let queue = [];
+  try { queue = JSON.parse(localStorage.getItem('queue')) || []; } catch (e) {}
+  function saveQueue() { try { localStorage.setItem('queue', JSON.stringify(queue)); } catch (e) {} }
+  const day = t => new Date(t).toDateString();
+
+  // 今日の目標：その日に初めて開いた（名前を選んだ）ときに入れる。スマホに保存（goal）してシート「今日の目標」にも送る。その日のうちは直せる
+  const todayKey = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  let goals = {}, goalSending = false;
+  try { goals = JSON.parse(localStorage.getItem('goal')) || {}; } catch (e) {}
+  function saveGoals() {
+    Object.keys(goals).forEach(n => { if (goals[n].day !== todayKey()) delete goals[n]; });
+    try { localStorage.setItem('goal', JSON.stringify(goals)); } catch (e) {}
+  }
+  function myGoal() { const g = goals[$('name').value]; return g && g.day === todayKey() && g.t != null ? g : null; }
+  function openGoal(edit) {
+    const name = $('name').value, g = myGoal();
+    if (!name) return;
+    $('goalWho').textContent = name + ' さん、今日の目標を入れてください';
+    ['k', 't', 'a'].forEach(k => $('g-' + k).value = g ? g[k] : '');
+    $('goalMsg').textContent = '';
+    $('goalNo').style.display = edit ? 'block' : 'none';
+    $('goalBox').classList.add('on');
+  }
+  function closeGoal() { $('goalBox').classList.remove('on'); }
+  function setGoal() {
+    const v = {};
+    for (const k of ['k', 't', 'a']) {
+      const s = $('g-' + k).value.trim(), n = Number(s);
+      if (s === '' || !(n >= 0) || n !== Math.floor(n)) { $('goalMsg').textContent = '3つとも0以上の数を入れてください'; return; }
+      v[k] = n;
+    }
+    goals[$('name').value] = Object.assign({ day: todayKey(), sent: false }, v);
+    saveGoals(); closeGoal(); render(); sendGoal();
+    $('msg').textContent = '今日の目標を決めました。がんばりましょう！';
+  }
+  // まだ送っていない目標を送る（電波がなければ、あとで送る）
+  function sendGoal() {
+    const name = Object.keys(goals).find(n => !goals[n].sent && goals[n].day === todayKey());
+    if (goalSending || !name) return;
+    const g = goals[name];
+    goalSending = true;
+    google.script.run
+      .withSuccessHandler(() => { goalSending = false; if (goals[name] === g) { g.sent = true; saveGoals(); } sendGoal(); })
+      .withFailureHandler(() => { goalSending = false; })
+      .setGoal(name, { k: g.k, t: g.t, a: g.a });
+  }
+  // 今日の数を受け取ったとき：シートの目標があれば使い、どこにもなければ目標を入れる画面を出す
+  function onToday(c) {
+    sent = c;
+    if (c && c._day === todayKey() && $('name').value) {
+      const name = $('name').value, g = myGoal();
+      if (c._goal && (!g || g.sent)) { goals[name] = Object.assign({ day: todayKey(), sent: true }, c._goal); saveGoals(); if ($('goalNo').style.display === 'none') closeGoal(); }
+      else if (!c._goal && !g) openGoal(false);
+    }
+    render();
+  }
+
+  function render() {
+    const name = $('name').value, counts = Object.assign({}, sent);
+    queue.filter(q => q.name === name && day(q.ts) === day(Date.now())).forEach(q => counts[q.result] = (counts[q.result] || 0) + 1);
+    results.forEach(r => $('c-' + r).textContent = counts[r] || 0);
+    const face = FACE.reduce((s, r) => s + (counts[r] || 0), 0);
+    $('face').textContent = face;
+    $('knock').textContent = face + (counts['不在'] || 0) + (counts['インターホンNG'] || 0);
+    $('apo').textContent = APOS.reduce((s, r) => s + (counts[r] || 0), 0);
+    $('pending').style.display = queue.length ? 'block' : 'none';
+    $('pending').textContent = '未送信 ' + queue.length + '件（電波が戻ったら自動で送ります）';
+    $('pendingCust').style.display = cQueue.length ? 'block' : 'none';
+    $('pendingCust').textContent = 'お客さんの情報 未送信 ' + cQueue.length + '件';
+    // 目標までのカウントダウン
+    const g = myGoal(), now = { knock: Number($('knock').textContent), face: face, apo: Number($('apo').textContent) };
+    $('goalEdit').style.display = name ? 'block' : 'none';
+    $('goalEdit').textContent = g ? '🎯 今日の目標を変える' : '🎯 今日の目標を入れる';
+    [['knock', 'k'], ['face', 't'], ['apo', 'a']].forEach(([id, k]) => {
+      const el = $('l-' + id);
+      if (!g) { el.innerHTML = ''; return; }
+      const left = g[k] - now[id], w = g[k] ? Math.min(100, now[id] / g[k] * 100) : 100;
+      el.innerHTML = (left > 0 ? 'あと <span class="n">' + left + '</span>' : '<span class="done">達成！🎉</span>') +
+        '<span class="bar"><i style="width:' + w + '%"></i></span><span class="g">目標 ' + g[k] + '</span>';
+    });
+  }
+
+  // アポを押したら、お客さんの情報を入れる画面を出す。入れた分はスマホに保存（cQueue）してから送る（電波がなければあとで）。
+  // お客さんの行はアポの記録からもサーバーで作られるので、「あとで入れる」でも一覧には出る
+  let products = [], cQueue = [], cSending = false, custRec = null;
+  try { cQueue = JSON.parse(localStorage.getItem('cQueue')) || []; } catch (e) {}
+  function saveCQueue() { try { localStorage.setItem('cQueue', JSON.stringify(cQueue)); } catch (e) {} }
+  function openCust(rec) {
+    custRec = rec;
+    $('custWho').textContent = rec.name + ' さんの' + rec.result + '（あとからお客さんの画面でも直せます）';
+    ['name', 'tel', 'addr', 'precheck', 'meeting', 'memo'].forEach(k => $('c-' + k).value = '');
+    $('c-interest').innerHTML = products.map(p => '<label><input type="checkbox" value="' + p + '">' + p + '</label>').join('');
+    $('custBox').classList.add('on');
+    $('custBox').scrollTop = 0;
+  }
+  function saveCust() {
+    const r = custRec, v = { recId: r.id, appointer: r.name, kind: r.result.replace('アポ', ''), date: todayKey() };
+    ['name', 'tel', 'addr', 'precheck', 'meeting', 'memo'].forEach(k => v[k] = $('c-' + k).value.trim());
+    v.interest = [...$('c-interest').querySelectorAll('input:checked')].map(x => x.value).join(', ');
+    $('custBox').classList.remove('on');
+    if (!v.name && !v.tel && !v.addr && !v.precheck && !v.meeting && !v.memo && !v.interest) return;
+    cQueue.push(v); saveCQueue(); render(); flushCust();
+    $('msg').textContent = 'お客さんの情報を保存しました';
+  }
+  function flushCust() {
+    if (cSending || !cQueue.length || queue.some(q => q.id === cQueue[0].recId)) return; // アポの記録が先に届いてから送る
+    cSending = true;
+    google.script.run
+      .withSuccessHandler(() => { cSending = false; cQueue.shift(); saveCQueue(); render(); flushCust(); })
+      .withFailureHandler(e => { cSending = false; if (/直せません|正しくありません|選んで/.test(e.message)) { cQueue.shift(); saveCQueue(); $('msg').textContent = e.message; } render(); })
+      .custSave(cQueue[0]);
+  }
+
+  function record(result) {
+    const name = $('name').value;
+    if (!name) { $('msg').textContent = '名前を選んでください'; return; }
+    if (busy) return;
+    if (!myGoal()) { openGoal(false); return; }
+    queue.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2, 8), name: name, result: result, ts: Date.now() });
+    saveQueue();
+    $('msg').textContent = '記録しました：' + result;
+    render();
+    // 押し間違い防止に少しの間ほかを押せなくする
+    setBusy(true, '記録中…');
+    setTimeout(() => setBusy(false), 500);
+    flush();
+    if (result === '両面アポ' || result === '片面アポ') openCust(queue[queue.length - 1]);
+  }
+
+  // 未送信をまとめて送る。送れた分だけ消す（同じ記録は二重に入らない）
+  function flush() {
+    sendGoal();
+    if (sending || !queue.length) return;
+    sending = true;
+    const batch = queue.slice(0, 50);
+    google.script.run
+      .withSuccessHandler(r => {
+        const ids = r.ids || r;
+        sending = false;
+        queue = queue.filter(q => !ids.includes(q.id));
+        if (r.unknown) $('msg').textContent = '名前が見つからない記録が' + r.unknown + '件ありました（管理者に連絡してください）';
+        saveQueue();
+        loadToday();
+        flushCust();
+        if (queue.length) flush();
+      })
+      .withFailureHandler(() => { sending = false; render(); })
+      .addRecords(batch);
+  }
+
+  function undo() {
+    const name = $('name').value;
+    if (!name) { $('msg').textContent = '名前を選んでください'; return; }
+    if (!confirm('直前の記録を取り消しますか？')) return;
+    const i = queue.map(q => q.name).lastIndexOf(name);
+    if (i >= 0) {
+      queue.splice(i, 1); saveQueue(); render();
+      $('msg').textContent = '取り消しました（未送信の分）';
+      return;
+    }
+    if (!navigator.onLine) { $('msg').textContent = '電波がない時は、送信済みの記録は取り消せません'; return; }
+    setBusy(true, '取り消し中…');
+    google.script.run
+      .withSuccessHandler(c => { setBusy(false); onToday(c); $('msg').textContent = '取り消しました'; })
+      .withFailureHandler(e => { setBusy(false); $('msg').textContent = 'エラー: ' + e.message; })
+      .undoLast(name);
+  }
+
+  // 少しの間、画面全体を覆ってほかのボタンや名前を触れないようにする
+  function setBusy(on, text) {
+    busy = on;
+    if (text) $('overlayText').textContent = text;
+    document.body.classList.toggle('busy', on);
+    document.querySelectorAll('button, select').forEach(el => el.disabled = on);
+  }
+
+  function loadToday() {
+    if (!$('name').value) return render();
+    google.script.run.withSuccessHandler(onToday).withFailureHandler(() => { render(); if (!myGoal()) openGoal(false); }).getTodayGoal($('name').value);
+  }
+
+  google.script.run.withSuccessHandler(cfg => {
+    results = cfg.results;
+    products = cfg.products || [];
+    cfg.names.forEach(n => $('name').add(new Option(n, n)));
+    results.forEach(r => {
+      const b = document.createElement('button');
+      b.className = 'r'; b.style.background = COLORS[r] || '#333';
+      b.innerHTML = r + '<span id="c-' + r + '">0</span>';
+      b.onclick = () => record(r);
+      $('grid').appendChild(b);
+    });
+    try { const saved = localStorage.getItem('name'); if (saved) $('name').value = saved; } catch (e) {}
+    loadToday();
+    flush();
+  }).getConfig();
+
+  $('name').onchange = () => {
+    try { localStorage.setItem('name', $('name').value); } catch (e) {}
+    sent = {};
+    loadToday();
+  };
+  $('undo').onclick = undo;
+  $('goalEdit').onclick = () => openGoal(true);
+  $('goalOk').onclick = setGoal;
+  $('goalNo').onclick = closeGoal;
+  $('custOk').onclick = saveCust;
+  $('custLater').onclick = () => $('custBox').classList.remove('on');
+  window.addEventListener('online', flush);
+  setInterval(() => { flush(); flushCust(); }, 20000);
+  // 開きっぱなしでも、日付が変わったら今日の数字に切り替える（0時に0へ）
+  let shownDay = day(Date.now());
+  setInterval(() => {
+    if (day(Date.now()) === shownDay) return;
+    shownDay = day(Date.now()); sent = {}; render(); loadToday();
+  }, 30000);
+</script>
+</body>
+</html>

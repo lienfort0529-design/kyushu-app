@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="九州支社">
+<meta name="theme-color" content="#18202e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>KPI・ランキング</title>
+<script src="api.js"></script>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; font-family: -apple-system, sans-serif; }
+  select { width: 100%; font-size: 16px; padding: 10px; border-radius: 10px; border: 1px solid #ccc; }
+  .tabs, .seg { display: flex; gap: 6px; margin: 0 0 12px; }
+  .tabs button, .seg button { flex: 1; padding: 9px 4px; font-size: 14px; }
+  .card { padding: 14px; margin-bottom: 12px; }
+  .card h3 { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 8px; font-size: 15px; }
+  .card h3 small { font-size: 11px; font-weight: 400; }
+  .nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; }
+  .nums div { font-size: 12px; color: var(--sub); }
+  .nums b { display: block; font-family: var(--num); font-size: 26px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .rates { display: flex; justify-content: space-around; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 13px; color: var(--sub); }
+  .rates b { font-family: var(--num); color: var(--ink); margin-left: 4px; }
+  .gl { display: grid; grid-template-columns: 52px 1fr auto; align-items: center; gap: 4px 10px; padding: 6px 0; font-size: 13px; color: var(--sub); }
+  .gl .v { font-family: var(--num); font-weight: 800; color: var(--ink); font-size: 15px; }
+  .gl .v.done { color: #27ae60; }
+  .bar { grid-column: 1 / -1; height: 6px; border-radius: 99px; overflow: hidden; }
+  .bar i { display: block; height: 100%; }
+  .rk { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+  .rk:first-of-type { border-top: 0; }
+  .rk .n { text-align: center; font-weight: 800; color: var(--sub); }
+  .rk .nm { font-weight: 700; }
+  .rk .v { font-family: var(--num); font-weight: 800; font-size: 17px; font-variant-numeric: tabular-nums; }
+  .rk.me .nm { color: var(--blue); }
+  .total { font-size: 13px; color: var(--sub); margin-top: 6px; text-align: right; }
+  .total b { font-family: var(--num); color: var(--ink); }
+  svg.ch { width: 100%; height: 180px; display: block; }
+  .legend { display: flex; gap: 14px; font-size: 12px; margin-top: 6px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  #msg { text-align: center; font-size: 13px; min-height: 18px; margin: 6px 0; }
+  .hint { font-size: 13px; color: var(--sub); }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&family=Oswald:wght@400;500&family=Shippori+Mincho+B1:wght@700&display=swap" rel="stylesheet">
+<script>
+  // 明るい・暗い：端末の設定に合わせる。右上のボタンで切り替えると、その端末に覚える（lfTheme）
+  (function () { try { var t = localStorage.getItem('lfTheme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) {} })();
+</script>
+<style>
+  /* 九州支社アプリ共通のデザイン（本社の住宅設備アプリ 32_クローザー入力/コード/lf.html と同じ。左のメニューだけ九州用）。
+     色は Lien Fort（lienfort.co.jp）の紺と青。各画面の style より後に読むので上書きになる */
+  :root { --ink: #18202e; --blue: #2a56a8; --btn: #2a56a8; --sub: #5b6577; --line: #e2e7ef; --bg: #f3f5f9; --pale: #eef2f9;
+          --surface: #fff; --surface2: #f6f8fb; --track: #e9edf3; --bar: #18202e; --chip: #18202e; --chipInk: #fff;
+          --veil: rgba(243,245,249,.72); --shadow: 0 1px 2px rgba(24,32,46,.06), 0 8px 24px rgba(24,32,46,.05);
+          --pend: #fff3cd; --pendInk: #7a5b00; --goodBg: #eafaf0; --badBg: #fdecea;
+          --en: Oswald, "Arial Narrow", sans-serif; --num: Inter, "Hiragino Sans", sans-serif; color-scheme: light; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --ink: #eef2f8; --blue: #7fa2e8; --sub: #9aa6b8; --line: #263042; --bg: #0d121b; --pale: #1c2433;
+          --surface: #161d29; --surface2: #1c2433; --track: #263042; --bar: #0a0f17; --chip: #eef2f8; --chipInk: #0d121b;
+          --veil: rgba(13,18,27,.72); --shadow: none; --pend: #3a3216; --pendInk: #f0d58a; --goodBg: #12301f; --badBg: #3a1a1a; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --ink: #eef2f8; --blue: #7fa2e8; --sub: #9aa6b8; --line: #263042; --bg: #0d121b; --pale: #1c2433;
+          --surface: #161d29; --surface2: #1c2433; --track: #263042; --bar: #0a0f17; --chip: #eef2f8; --chipInk: #0d121b;
+          --veil: rgba(13,18,27,.72); --shadow: none; --pend: #3a3216; --pendInk: #f0d58a; --goodBg: #12301f; --badBg: #3a1a1a; color-scheme: dark; }
+
+  body { background: var(--bg) !important; color: var(--ink) !important; padding: 0 14px 40px !important;
+         font-family: "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif !important; }
+
+  /* 上の帯 */
+  .lf-bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; margin: 0 -14px 14px; padding: 12px 14px;
+            background: var(--bar); color: #fff; }
+  .lf-back { flex: none; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; padding-bottom: 3px;
+             border: 1px solid rgba(255,255,255,.18); border-radius: 10px; color: #fff; text-decoration: none; font-size: 24px; }
+  .lf-t small { display: block; font-family: var(--en); font-size: 10px !important; letter-spacing: .3em; color: #8fa6cf !important; }
+  .lf-t b { font-size: 17px; letter-spacing: .05em; color: #fff; }
+  .lf-theme { flex: none; margin-left: auto; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+              border: 1px solid rgba(255,255,255,.18); border-radius: 10px; background: rgba(255,255,255,.06); color: #fff; padding: 0; cursor: pointer; }
+  .lf-theme svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+  .lf-bar .who ~ .lf-theme, .lf-bar .lf-theme ~ .who { margin-left: 8px; }
+
+  /* 入力欄 */
+  select, input, textarea { background: var(--surface) !important; color: var(--ink) !important; border: 1px solid var(--line) !important; }
+  select:focus, input:focus, textarea:focus { outline: 2px solid rgba(42,86,168,.35); border-color: var(--blue) !important; }
+  input[type="checkbox"], input[type="radio"] { accent-color: var(--btn); }
+  h2, h3, .card h3 { letter-spacing: .03em; color: var(--ink) !important; }
+  label, .note, .sub, small, #msg, .legend, .count, .calc, .coord, .state, .card dt, .gcard p { color: var(--sub) !important; }
+  td.s small, .shd td.c small, button.r small, .tiles a.app.main small { color: rgba(255,255,255,.85) !important; } td.s.last small { color: #5c4b00 !important; }
+
+  /* 面（カード・表・パネル） */
+  .card, .summary, .summary > div, .tbl, .gcard, .sheet .in, #close, .visit, .panel, .find, .fab, .showBtn,
+  td.d, .mon td, .shd td:not(.c), .checks label, #sale .checks label, .sheet .kinds label, .names button, #pickList button {
+    background: var(--surface) !important; border-color: var(--line) !important; color: var(--ink); }
+  .card, .tbl, .summary > div, .summary, .gcard, .visit { border: 1px solid var(--line) !important; border-radius: 16px !important; box-shadow: var(--shadow) !important; }
+  .card summary, .req { color: var(--blue) !important; }
+  .summary div { font-size: 12px; color: var(--sub); }
+  .summary b, .big, .rk .v, .v, .gy td b { font-family: var(--num) !important; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .summary b { font-weight: 800; font-size: 28px !important; color: var(--ink); }
+  .big { font-weight: 800 !important; color: var(--ink) !important; }
+  .bar, .left .bar { background: var(--track) !important; }
+  .bar i, .left .bar i { background: var(--btn) !important; } .bar i.ok { background: #27ae60 !important; }
+  td.d.today, .mon td.today { border-color: var(--blue) !important; color: var(--blue); }
+  td.s.free { background: var(--btn) !important; }
+  td.s.block { background: var(--pale) !important; }
+  .legend span:first-child i { background: var(--btn) !important; }
+  .sec { border-top-color: var(--line) !important; color: var(--ink); }
+  .st { background: var(--pale) !important; color: var(--ink) !important; }
+  .st.shoho { background: #8e44ad !important; color: #fff !important; }
+  .st.x { background: var(--badBg) !important; color: #e06b5f !important; }
+  #pending { background: var(--pend) !important; color: var(--pendInk) !important; }
+  .checks label, #sale .checks label, .sheet .kinds label { color: var(--ink) !important; }
+
+  /* 表（KPI） */
+  table { color: var(--ink); }
+  th { background: var(--surface2) !important; color: var(--sub) !important; border-color: var(--line) !important; }
+  td { border-color: var(--line) !important; }
+  .tbl td:first-child { background: var(--surface) !important; }
+  .tbl th:first-child, tr.total td { background: var(--surface2) !important; }
+  td.good { background: var(--goodBg) !important; } td.bad { background: var(--badBg) !important; }
+
+  /* ボタン。結果ボタンの色（成約＝緑など）は見分けやすさのため各画面のまま */
+  button { font-family: inherit; }
+  button.r { border-radius: 14px !important; box-shadow: 0 2px 0 rgba(0,0,0,.14); letter-spacing: .03em; }
+  .undo, .listbtn, .nav button, .btns > *, .cancel, .seg button, .gyreset, .admin button, .opts button, .two button, .links button,
+  .sides button, .close-btn, .choice button, .kinds button, .pc button, #goalEdit, .del, .add {
+    background: var(--surface) !important; border: 1px solid var(--line) !important; color: var(--ink) !important; }
+  .listbtn, .btns > *, .btns .map, .links button, .two button, #goalEdit, .close-btn { color: var(--blue) !important; }
+  .del { color: #e06b5f !important; border-color: rgba(224,107,95,.5) !important; }
+  .add { border: 2px dashed var(--blue) !important; color: var(--blue) !important; }
+  .ok, .acts .ok, .gcard .go, #close .ok { background: var(--btn) !important; color: #fff !important; }
+  .tabs { gap: 6px !important; }
+  .tabs button, .seg button { border-radius: 999px !important; border: 1px solid var(--line) !important; background: var(--surface) !important; color: var(--sub) !important; font-weight: 600; }
+  .tabs button.on, .seg button.on, .opts button.on, .choice button.on, .sides button.on, .showBtn.on {
+    background: var(--chip) !important; border-color: var(--chip) !important; color: var(--chipInk) !important; }
+  .kinds button.on { background: #8e44ad !important; border-color: #8e44ad !important; color: #fff !important; }
+  #clockBtn { background: var(--pale) !important; color: var(--ink) !important; }
+  #clockBtn.on { background: var(--badBg) !important; color: #e06b5f !important; }
+  #placeBtn { background: var(--surface) !important; }
+  #findList button { color: var(--ink) !important; border-top-color: var(--line) !important; }
+  .fab, .fab * { color: var(--blue) !important; } #layerBtn, #findBtn, .showBtn { color: var(--ink) !important; }
+  #areaChip { background: var(--surface) !important; color: var(--ink) !important; } #areaChip button { background: var(--pale) !important; color: var(--ink) !important; }
+
+  /* ランキング：1〜3位は丸い数字（金・銀・銅） */
+  .rk .n { font-family: var(--num); }
+  .rk.m1 .n, .rk.m2 .n, .rk.m3 .n { width: 26px; height: 26px; margin: 0 auto; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                                    font-size: 13px; font-weight: 800; }
+  .rk.m1 .n { background: #e9c46a; color: #18202e !important; }
+  .rk.m2 .n { background: #cfd5de; color: #18202e !important; }
+  .rk.m3 .n { background: #dcae86; color: #18202e !important; }
+  /* 目立たせるカード（チーム売上など） */
+  .card.feature { background: #18202e !important; border-color: #18202e !important; color: #fff; }
+  :root[data-theme="dark"] .card.feature { background: #1d2a44 !important; border-color: #2c3d5f !important; }
+  .card.feature h3, .card.feature .big { color: #fff !important; }
+  .card.feature .sub, .card.feature h3 small { color: #b8c4d8 !important; }
+  .card.feature .bar { background: rgba(255,255,255,.14) !important; } .card.feature .bar i { background: #5b8def !important; }
+
+  /* 重なる画面（入力・一覧など）と読み込み中 */
+  .sheet, #sale, #list, #pick { background: var(--bg) !important; }
+  #pickList button { border-color: var(--line) !important; }
+  #overlay { background: var(--veil) !important; color: var(--ink); }
+  #goalBox { background: rgba(0,0,0,.55) !important; }
+  .spinner { border-color: var(--track) !important; border-top-color: var(--btn) !important; }
+
+  /* パソコン：左にメニュー（#lfSide は下のスクリプトで作る） */
+  #lfSide { display: none; }
+  @media (min-width: 1024px) {
+    body.lf-side { padding-left: 264px !important; padding-right: 32px !important; }
+    body.lf-side .lf-bar { margin: 0 -32px 20px; padding-left: 32px; padding-right: 32px; }
+    body.lf-side .lf-back { display: none; }
+    body.lf-side > .hero { margin-left: -32px !important; margin-right: -32px !important; padding-left: 40px !important; }
+    #lfSide { display: flex; position: fixed; left: 0; top: 0; bottom: 0; width: 232px; z-index: 40; flex-direction: column; gap: 22px;
+              padding: 26px 14px; box-sizing: border-box; overflow-y: auto; background: #111824; color: #eef2f8; }
+    #lfSide .lg { display: block; padding: 0 10px; text-decoration: none; color: #eef2f8; }
+    #lfSide .lg small { display: block; font-family: var(--en); font-size: 11px; letter-spacing: .35em; color: #7fa2e8; }
+    #lfSide .lg b { font-family: "Shippori Mincho B1", serif; font-size: 22px; letter-spacing: .12em; }
+    #lfSide nav { display: flex; flex-direction: column; gap: 2px; }
+    #lfSide nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; color: #b8c4d8; text-decoration: none; font-size: 14px; }
+    #lfSide nav a:hover { background: #1a2333; color: #fff; }
+    #lfSide nav a.on { background: #2a56a8; color: #fff; font-weight: 700; }
+    #lfSide nav a span { font-family: var(--en); font-size: 9px; letter-spacing: .2em; color: #6f82a6; width: 58px; flex: none; }
+    #lfSide nav a.on span { color: #c9d8f7; }
+  }
+</style>
+<script>
+  // 右上の明るい・暗いボタンと、パソコンの左メニュー
+  document.addEventListener('DOMContentLoaded', function () {
+    var root = document.documentElement;
+    var dark = function () { var t = root.getAttribute('data-theme'); return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
+    var SUN = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+    var MOON = '<svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+    var host = document.querySelector('.lf-bar') || document.querySelector('.hero');
+    if (host) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'lf-theme';
+      var paint = function () { b.innerHTML = dark() ? SUN : MOON; b.setAttribute('aria-label', dark() ? '明るい表示にする' : '暗い表示にする'); };
+      b.onclick = function () { var t = dark() ? 'light' : 'dark'; root.setAttribute('data-theme', t); try { localStorage.setItem('lfTheme', t); } catch (e) {} paint(); };
+      paint();
+      if (host.classList.contains('hero')) { b.style.position = 'absolute'; b.style.top = '18px'; b.style.right = '16px'; b.style.zIndex = '2'; host.appendChild(b); }
+      else host.insertBefore(b, host.querySelector('.who'));
+    }
+    var gh = /github\.io$/.test(location.hostname);
+    var a0 = document.querySelector('a.lf-back, a[href*="?page="]');
+    var base = a0 ? a0.href.split('?')[0] : '';
+    var PAGES = [['tataki', '叩きカウンター', 'COUNTER'], ['kyaku', 'お客さん', 'CUSTOMER'], ['kpi', 'KPI・ランキング', 'KPI']];
+    var href = function (k) { return gh ? (k === 'menu' ? 'index.html' : k + '.html') : base + '?page=' + k; };
+    var title = (document.querySelector('.lf-t b') || {}).textContent || '';
+    var file = location.pathname.split('/').pop();
+    var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+    var side = document.createElement('aside');
+    side.id = 'lfSide';
+    side.innerHTML = '<a class="lg" target="_top" href="' + esc(href('menu')) + '"><small>LIEN FORT</small><b>九州支社</b></a><nav>' + PAGES.map(function (p) {
+      var on = gh ? file === p[0] + '.html' : title === p[1];
+      return '<a target="_top" class="' + (on ? 'on' : '') + '" href="' + esc(href(p[0])) + '"><span>' + p[2] + '</span>' + p[1] + '</a>';
+    }).join('') + '</nav>';
+    document.body.appendChild(side);
+    document.body.classList.add('lf-side');
+  });
+</script>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="lf-bar"><a href="index.html" class="lf-back" aria-label="メニュー">‹</a><div class="lf-t"><small>LIEN FORT</small><b>KPI・ランキング</b></div></header>
+  <div class="tabs" id="tabs"><button data-v="me">自分の成績</button><button data-v="rank">ランキング</button><button data-v="graph">グラフ</button></div>
+  <div id="msg">読み込み中…</div>
+  <div id="view"></div>
+
+<script>
+  // KPI：自分の成績・アポのその後・4人のランキング・日ごとのグラフ（数字はサーバーの kpiData。叩きのログとお客さんのシートから）
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) {} };
+  const pct = (a, b) => b ? (Math.round(a / b * 1000) / 10) + '%' : '—';
+  const yen = v => '¥' + Math.round(v || 0).toLocaleString();
+  let D = null, tab = store('kpiTab') || 'me', period = store('kpiPeriod') || 'month', gWho = store('kpiGraph') || 'me';
+  const me = () => store('name') || '';
+
+  function nums(o) {
+    return '<div class="nums"><div>叩き数<b>' + o.knock + '</b></div><div>対面数<b>' + o.face + '</b></div><div>アポ<b>' + o.apo + '</b></div></div>' +
+      '<div class="rates"><span>対面率<b>' + pct(o.face, o.knock) + '</b></span><span>アポ率<b>' + pct(o.apo, o.face) + '</b></span></div>';
+  }
+  function goalLine(label, v, g) {
+    const done = v >= g, w = g ? Math.min(100, v / g * 100) : 100;
+    return '<div class="gl"><span>' + label + '</span><span>' + v + ' ／ 目標 ' + g + '</span><span class="v' + (done ? ' done' : '') + '">' + (done ? '達成！' : 'あと ' + (g - v)) + '</span>' +
+      '<div class="bar"><i style="width:' + w + '%"></i></div></div>';
+  }
+  function viewMe() {
+    const names = D.people.map(p => p.name), name = names.includes(me()) ? me() : '';
+    let h = '<select id="who"><option value="">名前を選択</option>' + names.map(n => '<option' + (n === name ? ' selected' : '') + '>' + esc(n) + '</option>').join('') + '</select><div style="height:12px"></div>';
+    const p = D.people.find(x => x.name === name);
+    if (!p) return h + '<div class="hint">名前を選ぶと、自分の成績が出ます。</div>';
+    h += '<div class="card"><h3>今日の目標<small>' + D.today.slice(5).replace('-', '/') + '</small></h3>' +
+      (p.goal ? goalLine('叩き数', p.today.knock, p.goal.k) + goalLine('対面数', p.today.face, p.goal.t) + goalLine('アポ', p.today.apo, p.goal.a)
+        : '<div class="hint">まだ入れていません（カウンターを開くと入れる画面が出ます）</div>') + '</div>';
+    h += '<div class="card"><h3>今日</h3>' + nums(p.today) + '</div>';
+    h += '<div class="card"><h3>今週<small>' + D.week.slice(5).replace('-', '/') + '（水）から</small></h3>' + nums(p.week) + '</div>';
+    h += '<div class="card"><h3>今月</h3>' + nums(p.month) + '</div>';
+    h += '<div class="card"><h3>アポのその後<small>今月のアポ</small></h3>' +
+      '<div class="nums"><div>アポ<b>' + p.apos + '</b></div><div>前確OK<b>' + p.preOk + '</b></div><div>商談<b>' + p.meet + '</b></div></div>' +
+      '<div class="nums" style="margin-top:8px"><div>成約<b>' + p.won + '</b></div><div>成約率<b>' + pct(p.won, p.apos) + '</b></div><div>商談→成約<b>' + pct(p.won, p.meet) + '</b></div></div>' +
+      '<div class="rates"><span>前確OK率<b>' + pct(p.preOk, p.apos) + '</b></span><span>商談化率<b>' + pct(p.meet, p.apos) + '</b></span></div></div>';
+    h += '<div class="card"><h3>今月の成約・売上<small>成約日が今月</small></h3><div class="nums"><div>成約<b>' + p.wonMonth + '</b></div><div style="grid-column:span 2">売上<b>' + yen(p.salesMonth) + '</b></div></div></div>';
+    return h;
+  }
+  function rankCard(title, key, fmt, unit) {
+    const list = D.people.map(p => ({ name: p.name, v: key(p) })).sort((a, b) => b.v - a.v);
+    const sum = list.reduce((s, x) => s + x.v, 0);
+    let n = 0, prev = null;
+    return '<div class="card"><h3>' + title + '</h3>' + list.map((x, i) => {
+      if (x.v !== prev) { n = i + 1; prev = x.v; }
+      return '<div class="rk' + (n <= 3 && x.v ? ' m' + n : '') + (x.name === me() ? ' me' : '') + '"><span class="n">' + n + '</span><span class="nm">' + esc(x.name) + '</span><span class="v">' + fmt(x.v) + unit + '</span></div>';
+    }).join('') + '<div class="total">九州支社 合計 <b>' + fmt(sum) + unit + '</b></div></div>';
+  }
+  function viewRank() {
+    const P = { today: '今日', week: '今週', month: '今月' };
+    let h = '<div class="seg" id="period">' + Object.keys(P).map(k => '<button data-v="' + k + '" class="' + (k === period ? 'on' : '') + '">' + P[k] + '</button>').join('') + '</div>';
+    const num = v => v.toLocaleString();
+    h += rankCard('アポ数', p => p[period].apo, num, '件') + rankCard('叩き数', p => p[period].knock, num, '軒') + rankCard('対面数', p => p[period].face, num, '件');
+    if (period === 'month') h += rankCard('成約数（今月）', p => p.wonMonth, num, '件') + rankCard('売上（今月）', p => p.salesMonth, yen, '');
+    else h += '<div class="hint">成約数・売上は「今月」で見られます。</div>';
+    return h;
+  }
+  function viewGraph() {
+    const names = D.people.map(p => p.name), mine = gWho === 'me' && names.includes(me());
+    let h = '<div class="seg" id="gwho"><button data-v="me" class="' + (gWho === 'me' ? 'on' : '') + '">自分</button><button data-v="all" class="' + (gWho === 'all' ? 'on' : '') + '">九州支社 全員</button></div>';
+    if (gWho === 'me' && !mine) return h + '<div class="hint">「自分の成績」で名前を選ぶと、自分のグラフが出ます。</div>';
+    const people = mine ? D.people.filter(p => p.name === me()) : D.people;
+    const [y, m] = D.month.split('-').map(Number), last = Math.min(new Date(y, m, 0).getDate(), Number(D.today.slice(8)));
+    const days = [];
+    for (let d = 1; d <= last; d++) {
+      const k = D.month + '-' + String(d).padStart(2, '0'), v = { knock: 0, apo: 0 };
+      people.forEach(p => { const x = p.days[k]; if (x) { v.knock += x.knock; v.apo += x.apo; } });
+      days.push(v);
+    }
+    const chart = (key, color, title) => {
+      const max = Math.max(1, ...days.map(d => d[key])), W = 320, Hh = 150, bw = W / days.length;
+      const bars = days.map((d, i) => { const hh = d[key] / max * (Hh - 20); return '<rect x="' + (i * bw + 1) + '" y="' + (Hh - hh) + '" width="' + Math.max(1, bw - 2) + '" height="' + hh + '" rx="1.5" fill="' + color + '"><title>' + (i + 1) + '日 ' + d[key] + '</title></rect>'; }).join('');
+      const labels = days.map((d, i) => (i + 1) % 5 === 0 || i === 0 ? '<text x="' + (i * bw + bw / 2) + '" y="' + (Hh + 14) + '" font-size="9" text-anchor="middle" fill="currentColor">' + (i + 1) + '</text>' : '').join('');
+      const total = days.reduce((s, d) => s + d[key], 0);
+      return '<div class="card"><h3>' + title + '<small>今月 合計 ' + total + '・最大 ' + max + '</small></h3><svg class="ch" viewBox="0 0 ' + W + ' ' + (Hh + 18) + '" style="color:var(--sub)">' +
+        '<line x1="0" x2="' + W + '" y1="' + Hh + '" y2="' + Hh + '" stroke="var(--line)"/>' + bars + labels + '</svg></div>';
+    };
+    return h + chart('knock', 'var(--btn)', '日ごとの叩き数') + chart('apo', '#27ae60', '日ごとのアポ数');
+  }
+  function draw() {
+    document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === tab));
+    if (!D) return;
+    $('view').innerHTML = tab === 'rank' ? viewRank() : tab === 'graph' ? viewGraph() : viewMe();
+    if ($('who')) $('who').onchange = () => { store('name', $('who').value); draw(); };
+    document.querySelectorAll('#period button').forEach(b => b.onclick = () => { period = b.dataset.v; store('kpiPeriod', period); draw(); });
+    document.querySelectorAll('#gwho button').forEach(b => b.onclick = () => { gWho = b.dataset.v; store('kpiGraph', gWho); draw(); });
+  }
+  document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => { tab = b.dataset.v; store('kpiTab', tab); draw(); });
+  draw();
+  google.script.run
+    .withSuccessHandler(d => { D = d; $('msg').textContent = ''; draw(); })
+    .withFailureHandler(e => { $('msg').textContent = '読み込めませんでした：' + e.message; })
+    .kpiData();
+</script>
+</body>
+</html>
